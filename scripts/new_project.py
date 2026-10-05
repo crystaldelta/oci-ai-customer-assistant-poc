@@ -37,8 +37,9 @@ ROOT = Path(__file__).resolve().parents[1]
 PACKAGE, PROJECT = "assistant", "ai-starter"
 CLIENT, LINK_PREFIX = "Example Co", "https://example.invalid/"
 
-# Never walked: generated, installed or version-control folders.
-SKIP_DIRS = {".git", ".venv", "node_modules", "dist", "__pycache__", ".pytest_cache", ".ruff_cache", "data"}
+# Never walked: generated, installed or version-control folders, and the skills (`.claude/`), which
+# name the starter itself.
+SKIP_DIRS = {".git", ".venv", "node_modules", "dist", "__pycache__", ".pytest_cache", ".ruff_cache", "data", ".claude"}
 TEXT_SUFFIXES = {".py", ".md", ".toml", ".txt", ".yml", ".yaml", ".json", ".ts", ".tsx", ".js", ".css", ".html", ".in"}
 TEXT_NAMES = {"Dockerfile", ".env.example", ".gitignore", ".dockerignore"}
 # Deleted with --safety-rules no: they expect the emergency reply.

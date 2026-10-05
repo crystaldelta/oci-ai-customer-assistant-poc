@@ -6,6 +6,8 @@ with citations, safety rules first, and a streaming chat page. Start with
 decision log are in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): follow the principles, and record
 any new architecture decision there. Setup and layout are in [README.md](README.md). The
 blueprint this implements is the `ai-project` skill (with `ai-project-aws` or `ai-project-azure`).
+Those skills and `langfuse` are in [.claude/skills/](.claude/skills/), so they load for anyone
+working in the repo; they are copies, so an improvement to one belongs in the shared skill too.
 
 **Organisation style:** professional tone, Australian English and formats. Pricing or contract
 questions go to Crystal Delta's Sales team.
