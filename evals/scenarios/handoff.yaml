@@ -1,0 +1,26 @@
+# Complaints and requests only the customer's account can answer are answered from the content
+# with the contact route (the `handoff` prompt), never by asking for account details.
+
+- id: formal-complaint
+  description: A customer wants to complain.
+  turns:
+    - user: I want to make a complaint about how my last call was handled.
+      expect:
+        behaviour: handoff
+        sources: [Complaints and feedback]
+        avoids: [account number]
+      ideal: >-
+        Acknowledges the frustration briefly, then gives the ways to complain (online account,
+        email or phone), the two business days to acknowledge, and the independent dispute
+        scheme if not satisfied. Asks for no personal details.
+
+- id: account-balance
+  description: A question only the account can answer.
+  turns:
+    - user: How much do I owe right now?
+      expect:
+        behaviour: handoff
+        sources: [Contact us]
+        avoids: [account number]
+      ideal: >-
+        Says it cannot see accounts, and points to the online account or the app for the balance.

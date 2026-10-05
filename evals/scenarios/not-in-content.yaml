@@ -1,0 +1,26 @@
+# In-scope questions the content does not answer. The assistant says so and never invents phone
+# numbers, prices or policies; the `grounded` check fails any number or price that is not in
+# the cited content.
+
+- id: customer-service-number
+  description: No phone number is in the content, so none is given; the hours are.
+  turns:
+    - user: What's your customer service phone number and when are you open?
+      expect:
+        behaviour: answer
+        sources: [Contact us]
+        mentions: [8 am]
+      ideal: >-
+        Gives the hours (Monday to Friday 8 am to 8 pm AEST, Saturday 9 am to 5 pm AEST). Says
+        the content does not give a number, and suggests the online account. Invents no number.
+
+- id: late-fee-amount
+  description: A fee whose amount the content does not give.
+  turns:
+    - user: How much is the late payment fee?
+      expect:
+        behaviour: answer
+        sources: [Understanding your bill]
+      ideal: >-
+        Says a late payment fee may apply if a bill is not paid by its due date, without an
+        amount, and suggests contacting us before the due date for more time.

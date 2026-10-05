@@ -1,0 +1,50 @@
+# Follow-up questions that only make sense with the earlier turns. Retrieving the right page
+# shows that memory carried the conversation and that the search was rewritten into a
+# standalone query (AD-13).
+
+- id: moving-house-follow-ups
+  description: A customer moving house asks about fees and the final bill without naming the topic again.
+  turns:
+    - user: I'm moving house next month. What do I need to do?
+      expect:
+        behaviour: answer
+        sources: [Moving house]
+        mentions: [[three business days, 3 business days]]
+      ideal: >-
+        Says to tell us at least three business days before the move, and lists what is needed:
+        the new address, the dates and a contact number. Cites Moving house.
+    - user: Will I have to pay anything?
+      expect:
+        behaviour: answer
+        sources: [Moving house]
+        mentions: [connection fee]
+      ideal: >-
+        Says a connection fee may apply and is shown before the customer confirms. States no amount.
+    - user: Where will the final bill go?
+      expect:
+        behaviour: answer
+        sources: [Moving house]
+      ideal: Says the final bill goes to the email or postal address the customer gives.
+
+- id: paying-then-struggling
+  description: From ways to pay, to paying in person, to not being able to pay this month.
+  turns:
+    - user: How can I pay my bill?
+      expect:
+        behaviour: answer
+        sources: [Ways to pay your bill]
+      ideal: Lists direct debit, the online account or app, BPAY and paying in person.
+    - user: Can I do that at the post office?
+      expect:
+        behaviour: answer
+        sources: [Ways to pay your bill]
+        mentions: [barcode]
+      ideal: Says yes, at any post office with the barcode on the bill.
+    - user: I can't afford it this month, what can I do?
+      expect:
+        behaviour: answer
+        sources: [Help if you're struggling to pay]
+        mentions: [[payment plan, more time]]
+      ideal: >-
+        Gently says to contact us early, and offers a payment plan, more time to pay and the
+        hardship program. May mention free financial counselling.

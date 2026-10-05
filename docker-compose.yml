@@ -1,0 +1,276 @@
+# Local stack for ai-starter.
+#   - qdrant      : vector DB
+#   - ingest      : one-shot job that fills Qdrant from CONTENT_DIR (./content: Markdown pages
+#                   with `title` and `url` front matter) on a cold volume
+#   - api         : FastAPI over src/assistant/service.py; conversations in the memory-data volume
+#   - agentcore   : optional AgentCore Runtime image, behind the `agentcore` profile; needs a
+#                   published index in data/store (README, "AgentCore image locally")
+#   - langfuse-*  : optional self-hosted tracing, behind the `tracing` profile
+#
+# The LLM is Ollama running natively on the host (Docker on macOS has no GPU
+# access), reached from the containers at host.docker.internal:11434.
+#
+# The project name (containers, volumes, image tags) is COMPOSE_PROJECT_NAME, and each host
+# port is a variable, so two projects' stacks can run side by side:
+#   COMPOSE_PROJECT_NAME=other API_PORT=8100 QDRANT_PORT=6433 docker compose up -d --build
+#
+# Start:            docker compose up -d --build
+# With tracing:     docker compose --profile tracing up -d --build
+# AgentCore image:  docker compose --profile agentcore up -d --build agentcore
+# API docs:         http://localhost:${API_PORT:-8000}/docs
+# Qdrant dashboard: http://localhost:${QDRANT_PORT:-6333}/dashboard
+# Langfuse UI:      http://localhost:${LANGFUSE_PORT:-3000}  (local login: see .env.example)
+name: ${COMPOSE_PROJECT_NAME:-ai-starter}
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: api
+    image: ${COMPOSE_PROJECT_NAME:-ai-starter}-api:latest
+    depends_on:
+      ingest:
+        condition: service_completed_successfully
+    ports:
+      - "${API_PORT:-8000}:8000"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      # Container URLs. `environment` wins over `env_file`, so these replace the
+      # host URLs in .env.
+      QDRANT_URL: http://qdrant:6333
+      OLLAMA_BASE_URL: http://host.docker.internal:11434
+      LANGFUSE_HOST: http://langfuse:3000
+      MEMORY_PATH: /data/memory.sqlite
+      # Used only with AGENT_RUNTIME=agentcore in .env: the API then calls the `agentcore`
+      # service (its profile must be up) instead of answering in process.
+      AGENTCORE_URL: http://agentcore:8080
+    extra_hosts:
+      - "host.docker.internal:host-gateway"   # needed on Linux; built in on macOS
+    volumes:
+      - ./src:/app/src
+      - model-cache:/cache
+      - memory-data:/data   # conversations (MEMORY=sqlite); wiped by `down -v`
+    command:
+      - uvicorn
+      - assistant.api:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+      - --reload
+      - --reload-dir
+      - src
+      - --reload-include # prompt files are read once at startup, so reload on those too
+      - "*.md"
+    healthcheck:
+      # No curl in the slim image, so use the interpreter that is there.
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request;urllib.request.urlopen('http://localhost:8000/api/health').read()"
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+
+  # Fills the collection before `api` starts. --if-empty makes it a no-op once
+  # the volume is populated; run `python -m assistant.ingest` to rebuild.
+  ingest:
+    image: ${COMPOSE_PROJECT_NAME:-ai-starter}-api:latest
+    depends_on:
+      qdrant:
+        condition: service_healthy
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      QDRANT_URL: http://qdrant:6333
+      CONTENT_DIR: /app/content
+    volumes:
+      - ./src:/app/src
+      - ./content:/app/content:ro   # CONTENT_DIR inside the container
+      - model-cache:/cache
+    command: ["python", "-m", "assistant.ingest", "--if-empty"]
+    restart: "no"
+
+  # The image AgentCore runs, run locally (Phase 5). It searches the index published to the local
+  # index store in data/store (publish it first: README, "AgentCore image locally"), and uses Ollama on the
+  # host unless AGENTCORE_LLM_PROVIDER=bedrock, which needs AWS credentials: a profile from
+  # ~/.aws (AWS_PROFILE), or AWS_* variables in .env.
+  agentcore:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: agentcore
+    image: ${COMPOSE_PROJECT_NAME:-ai-starter}-agentcore:latest
+    profiles: ["agentcore"]
+    ports:
+      - "${AGENTCORE_PORT:-8080}:8080"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      LLM_PROVIDER: ${AGENTCORE_LLM_PROVIDER:-ollama}
+      OLLAMA_BASE_URL: http://host.docker.internal:11434
+      LANGFUSE_HOST: http://langfuse:3000
+      INDEX_STORE: /store   # the local index store, whatever .env says
+      AWS_CONFIG_FILE: /aws/config
+      AWS_SHARED_CREDENTIALS_FILE: /aws/credentials
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ${HOME}/.aws:/aws:ro
+      - ./data/store:/store:ro
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request;urllib.request.urlopen('http://localhost:8080/ping').read()"
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports:
+      - "${QDRANT_PORT:-6333}:6333"   # REST + dashboard
+    volumes:
+      - qdrant-data:/qdrant/storage
+    restart: unless-stopped
+    healthcheck:
+      # The qdrant image has bash but no curl or wget, so probe the port directly.
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/6333"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  # ---------------------------------------------- Langfuse (profile: tracing)
+  # Local-only defaults: nothing here is published except the Langfuse UI.
+  langfuse-db:
+    image: postgres:17-alpine
+    profiles: ["tracing"]
+    environment:
+      POSTGRES_USER: langfuse
+      POSTGRES_PASSWORD: langfuse
+      POSTGRES_DB: langfuse
+    volumes:
+      - langfuse-pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U langfuse"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  langfuse-clickhouse:
+    image: clickhouse/clickhouse-server:24
+    profiles: ["tracing"]
+    environment:
+      CLICKHOUSE_USER: clickhouse
+      CLICKHOUSE_PASSWORD: clickhouse
+    volumes:
+      - langfuse-ch-data:/var/lib/clickhouse
+      - langfuse-ch-logs:/var/log/clickhouse-server
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8123/ping || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  langfuse-redis:
+    image: redis:7-alpine
+    profiles: ["tracing"]
+    command: redis-server --requirepass local-redis
+    volumes:
+      - langfuse-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "local-redis", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # minio/minio is no longer pullable from Docker Hub. Chainguard's
+  # free image publishes only `latest`, so it is pinned by digest; this one is
+  # RELEASE.2026-09-22T19-25-18Z.
+  langfuse-minio:
+    image: cgr.dev/chainguard/minio@sha256:71674988a1c7ddd5724928633199152b11e4ddefd6c6ce2d60772ff4a8f22ca9
+    profiles: ["tracing"]
+    entrypoint: sh
+    command: -c 'mkdir -p /data/langfuse && minio server --address ":9000" /data'
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: local-minio
+    volumes:
+      - langfuse-minio-data:/data
+
+  langfuse-worker:
+    image: langfuse/langfuse-worker:3
+    profiles: ["tracing"]
+    depends_on:
+      langfuse-db:
+        condition: service_healthy
+      langfuse-clickhouse:
+        condition: service_healthy
+      langfuse-redis:
+        condition: service_healthy
+    environment: &langfuse-env
+      DATABASE_URL: postgresql://langfuse:langfuse@langfuse-db:5432/langfuse
+      CLICKHOUSE_URL: http://langfuse-clickhouse:8123
+      CLICKHOUSE_MIGRATION_URL: clickhouse://langfuse-clickhouse:9000
+      CLICKHOUSE_USER: clickhouse
+      CLICKHOUSE_PASSWORD: clickhouse
+      CLICKHOUSE_CLUSTER_ENABLED: "false"
+      REDIS_HOST: langfuse-redis
+      REDIS_PORT: "6379"
+      REDIS_AUTH: local-redis
+      SALT: local-dev-only
+      ENCRYPTION_KEY: "0000000000000000000000000000000000000000000000000000000000000000"
+      LANGFUSE_S3_EVENT_UPLOAD_ENABLED: "true"
+      LANGFUSE_S3_EVENT_UPLOAD_BUCKET: langfuse
+      LANGFUSE_S3_EVENT_UPLOAD_REGION: auto
+      LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID: minio
+      LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY: local-minio
+      LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT: http://langfuse-minio:9000
+      LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE: "true"
+      LANGFUSE_S3_MEDIA_UPLOAD_ENABLED: "false"
+
+  langfuse:
+    image: langfuse/langfuse:3
+    profiles: ["tracing"]
+    depends_on:
+      langfuse-db:
+        condition: service_healthy
+      langfuse-clickhouse:
+        condition: service_healthy
+      langfuse-redis:
+        condition: service_healthy
+    ports:
+      - "${LANGFUSE_PORT:-3000}:3000"
+    environment:
+      <<: *langfuse-env
+      NEXTAUTH_URL: http://localhost:${LANGFUSE_PORT:-3000}
+      NEXTAUTH_SECRET: local-dev-only-not-a-secret
+      LANGFUSE_INIT_ORG_ID: local
+      LANGFUSE_INIT_ORG_NAME: Local
+      LANGFUSE_INIT_PROJECT_ID: ai-starter
+      LANGFUSE_INIT_PROJECT_NAME: ai-starter
+      LANGFUSE_INIT_PROJECT_PUBLIC_KEY: pk-lf-local
+      LANGFUSE_INIT_PROJECT_SECRET_KEY: sk-lf-local
+      LANGFUSE_INIT_USER_EMAIL: admin@example.com
+      LANGFUSE_INIT_USER_NAME: Local Admin
+      LANGFUSE_INIT_USER_PASSWORD: localdev
+
+volumes:
+  model-cache:
+  memory-data:
+  qdrant-data:
+  langfuse-pg-data:
+  langfuse-ch-data:
+  langfuse-ch-logs:
+  langfuse-redis-data:
+  langfuse-minio-data:

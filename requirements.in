@@ -1,0 +1,26 @@
+# Direct dependencies. requirements.txt is the lock compiled from this file;
+# edit here, then re-lock (see README, "Dependencies").
+
+# Runtime
+langchain>=1.0                   # needed by langfuse.langchain.CallbackHandler
+langchain-core>=1.0
+langchain-ollama>=1.0
+langchain-qdrant>=1.0
+langchain-text-splitters>=1.0
+langgraph>=1.0
+langgraph-checkpoint-sqlite>=3.0 # local `memory` seam
+pydantic-settings>=2.6
+qdrant-client>=1.12
+fastembed>=0.5                   # ONNX embeddings; no torch
+python-dotenv>=1.0
+langfuse>=4.7,<5                 # 4.7+: real-time v4 ingestion; works with the local langfuse:3 server (>= 3.63)
+fastapi>=0.115
+uvicorn[standard]>=0.32
+httpx>=0.28                      # scripts/chat.py and fastapi.testclient
+pyyaml>=6.0                      # evals/scenarios/
+langchain-aws>=1.0               # `llm` seam on Bedrock (Converse); brings boto3 for S3 and the guardrail
+bedrock-agentcore>=1.0           # AgentCore Runtime entry point (agentcore.py)
+
+# Tests and linting
+pytest>=8.3
+ruff>=0.8                        # lint and format (config in pyproject.toml)

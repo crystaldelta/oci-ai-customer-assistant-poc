@@ -1,0 +1,46 @@
+{
+    "name": "ai-starter-test",
+    "description": "ai-starter (AD-18). Blocks harmful content, prompt attacks and card details; reports PII, profanity in questions and grounding without acting, until the evaluation sets thresholds.",
+    "contentPolicyConfig": {
+        "filtersConfig": [
+            {"type": "SEXUAL", "inputStrength": "HIGH", "outputStrength": "HIGH"},
+            {"type": "HATE", "inputStrength": "HIGH", "outputStrength": "HIGH"},
+            {"type": "INSULTS", "inputStrength": "MEDIUM", "outputStrength": "HIGH"},
+            {"type": "VIOLENCE", "inputStrength": "MEDIUM", "outputStrength": "HIGH"},
+            {"type": "MISCONDUCT", "inputStrength": "MEDIUM", "outputStrength": "HIGH"},
+            {"type": "PROMPT_ATTACK", "inputStrength": "HIGH", "outputStrength": "NONE"}
+        ],
+        "tierConfig": {"tierName": "CLASSIC"}
+    },
+    "wordPolicyConfig": {
+        "managedWordListsConfig": [
+            {
+                "type": "PROFANITY",
+                "inputAction": "NONE",
+                "outputAction": "BLOCK",
+                "inputEnabled": true,
+                "outputEnabled": true
+            }
+        ]
+    },
+    "sensitiveInformationPolicyConfig": {
+        "piiEntitiesConfig": [
+            {"type": "CREDIT_DEBIT_CARD_NUMBER", "action": "BLOCK", "inputAction": "ANONYMIZE", "outputAction": "BLOCK"},
+            {"type": "CREDIT_DEBIT_CARD_CVV", "action": "BLOCK", "inputAction": "ANONYMIZE", "outputAction": "BLOCK"},
+            {"type": "CREDIT_DEBIT_CARD_EXPIRY", "action": "BLOCK", "inputAction": "ANONYMIZE", "outputAction": "BLOCK"},
+            {"type": "PASSWORD", "action": "BLOCK", "inputAction": "ANONYMIZE", "outputAction": "BLOCK"},
+            {"type": "EMAIL", "action": "NONE", "inputAction": "NONE", "outputAction": "NONE"},
+            {"type": "PHONE", "action": "NONE", "inputAction": "NONE", "outputAction": "NONE"},
+            {"type": "ADDRESS", "action": "NONE", "inputAction": "NONE", "outputAction": "NONE"},
+            {"type": "NAME", "action": "NONE", "inputAction": "NONE", "outputAction": "NONE"}
+        ]
+    },
+    "contextualGroundingPolicyConfig": {
+        "filtersConfig": [
+            {"type": "GROUNDING", "threshold": 0.7, "action": "NONE", "enabled": true},
+            {"type": "RELEVANCE", "threshold": 0.5, "action": "NONE", "enabled": true}
+        ]
+    },
+    "blockedInputMessaging": "Sorry, I can only help with questions about our services. If anyone is in danger, call 000.",
+    "blockedOutputsMessaging": "Sorry, I can't answer that here. Our help pages may have what you need. If anyone is in danger, call 000."
+}

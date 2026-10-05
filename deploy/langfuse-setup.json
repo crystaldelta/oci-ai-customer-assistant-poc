@@ -1,0 +1,130 @@
+{
+  "_comment": "What scripts/setup_langfuse.py creates in a Langfuse project. Names must match what the code sends (tracing.py, guardrail checks). Edit this file, not the script.",
+  "score_configs": [
+    {
+      "name": "guardrail",
+      "dataType": "CATEGORICAL",
+      "description": "The guardrail's decision for the turn. No score for a fixed reply (nothing was checked).",
+      "categories": [
+        {"label": "allowed", "value": 0},
+        {"label": "flagged", "value": 1},
+        {"label": "masked", "value": 2},
+        {"label": "blocked_input", "value": 3},
+        {"label": "blocked_output", "value": 4}
+      ]
+    },
+    {
+      "name": "guardrail_grounding",
+      "dataType": "NUMERIC",
+      "minValue": 0,
+      "maxValue": 1,
+      "description": "How well the retrieved content supports the answer (guardrail grounding check). Low values suggest an unsupported answer."
+    },
+    {
+      "name": "guardrail_relevance",
+      "dataType": "NUMERIC",
+      "minValue": 0,
+      "maxValue": 1,
+      "description": "How relevant the answer is to the search (guardrail relevance check)."
+    },
+    {
+      "name": "first_status_ms",
+      "dataType": "NUMERIC",
+      "minValue": 0,
+      "description": "Milliseconds from the question to the first status event (visible feedback)."
+    },
+    {
+      "name": "first_token_ms",
+      "dataType": "NUMERIC",
+      "minValue": 0,
+      "description": "Milliseconds from the question to the first answer token."
+    },
+    {
+      "name": "total_ms",
+      "dataType": "NUMERIC",
+      "minValue": 0,
+      "description": "Milliseconds from the question to the end of the answer."
+    },
+    {
+      "name": "user_feedback",
+      "dataType": "BOOLEAN",
+      "description": "Thumbs up (true) or down (false) from the user, once the front end sends it."
+    },
+    {
+      "name": "review",
+      "dataType": "CATEGORICAL",
+      "description": "A reviewer's verdict on an answer, for annotation queues.",
+      "categories": [
+        {"label": "good", "value": 2},
+        {"label": "acceptable", "value": 1},
+        {"label": "wrong", "value": 0},
+        {"label": "unsafe", "value": -1}
+      ]
+    }
+  ],
+  "dashboards": [
+    {
+      "name": "Assistant health",
+      "description": "Created by scripts/setup_langfuse.py. Speed, guardrail decisions and grounding.",
+      "widgets": [
+        {
+          "name": "First token (ms), p50 and p95",
+          "view": "scores-numeric",
+          "dimensions": [],
+          "metrics": [{"measure": "value", "agg": "p50"}, {"measure": "value", "agg": "p95"}],
+          "filters": [{"column": "name", "operator": "=", "type": "string", "value": "first_token_ms"}],
+          "chartType": "LINE_TIME_SERIES"
+        },
+        {
+          "name": "Total answer time (ms), p50 and p95",
+          "view": "scores-numeric",
+          "dimensions": [],
+          "metrics": [{"measure": "value", "agg": "p50"}, {"measure": "value", "agg": "p95"}],
+          "filters": [{"column": "name", "operator": "=", "type": "string", "value": "total_ms"}],
+          "chartType": "LINE_TIME_SERIES"
+        },
+        {
+          "name": "Guardrail decisions per day",
+          "view": "scores-categorical",
+          "dimensions": [{"field": "stringValue"}],
+          "metrics": [{"measure": "count", "agg": "count"}],
+          "filters": [{"column": "name", "operator": "=", "type": "string", "value": "guardrail"}],
+          "chartType": "BAR_TIME_SERIES"
+        },
+        {
+          "name": "Grounding, average",
+          "view": "scores-numeric",
+          "dimensions": [],
+          "metrics": [{"measure": "value", "agg": "avg"}],
+          "filters": [{"column": "name", "operator": "=", "type": "string", "value": "guardrail_grounding"}],
+          "chartType": "LINE_TIME_SERIES"
+        },
+        {
+          "name": "Guardrail check latency (ms), p95",
+          "view": "observations",
+          "dimensions": [{"field": "name"}],
+          "metrics": [{"measure": "latency", "agg": "p95"}],
+          "filters": [{"column": "type", "operator": "=", "type": "string", "value": "GUARDRAIL"}],
+          "chartType": "HORIZONTAL_BAR"
+        },
+        {
+          "name": "Model calls, p95 latency by model",
+          "view": "observations",
+          "dimensions": [{"field": "providedModelName"}],
+          "metrics": [{"measure": "latency", "agg": "p95"}],
+          "filters": [{"column": "type", "operator": "=", "type": "string", "value": "GENERATION"}],
+          "chartType": "HORIZONTAL_BAR"
+        }
+      ]
+    }
+  ],
+  "manual_steps": [
+    "Protect the production prompt label (project settings, prompt management; plan permitting), so only named people can promote a prompt.",
+    "Create one API key pair per environment (local, test, production) and store them in the environment's secret store, never in the repo.",
+    "Set data retention for traces deliberately (project settings), in line with the data-residency decision.",
+    "Add project members with the least role they need; reviewers as annotators.",
+    "Seed the prompts: .venv/bin/python scripts/push_prompts.py (creates only the prompts Langfuse lacks).",
+    "Open the dashboard once real traces exist and check each widget shows data; adjust deploy/langfuse-setup.json if a field name has changed.",
+    "Grounding p10: the API offers no p10 aggregation; add it in the UI if wanted."
+  ]
+}

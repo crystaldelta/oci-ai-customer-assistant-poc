@@ -1,0 +1,28 @@
+# Retrieval expectations for scripts/verify_retrieval.py, against the content in CONTENT_DIR.
+# Pages are URL paths. Replace these with the client's representative questions, both sides of
+# RETRIEVAL_MIN_SCORE, once their content is in.
+
+first:
+  - question: How can I pay my bill?
+    pages: [/help/ways-to-pay]
+  - question: I'm moving house next month, what do I need to do?
+    pages: [/help/moving-house]
+  - question: How do I make a complaint?
+    pages: [/help/complaints]
+  - question: I forgot my password, how do I reset it?
+    pages: [/help/your-account]
+  - question: Why did my bill go up this month?
+    pages: [/help/understanding-your-bill]
+
+reached:
+  - question: What can I do if I can't afford my bill this month?
+    pages: [/help/struggling-to-pay]
+  - question: What are your customer service hours?
+    pages: [/help/contact-us]
+
+off_topic:
+  - What's the weather going to be in Melbourne tomorrow?
+  - Can you help me write a cover letter for a job?
+  - Who won the AFL grand final?
+  - What's a good recipe for lasagne?
+  - What is the capital of France?

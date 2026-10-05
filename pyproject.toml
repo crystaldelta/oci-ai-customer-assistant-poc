@@ -1,0 +1,33 @@
+[project]
+name = "ai-starter"
+version = "0.1.0"
+description = "Crystal Delta starter for AI assistants that answer from a client's content"
+requires-python = ">=3.13"
+
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+assistant = ["prompts/*.md", "prompts/versions.json"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src", "."]  # "." for evals/
+testpaths = ["tests"]
+# The AgentCore SDK's own deprecations (class-based pydantic config, utcnow); not ours to fix.
+filterwarnings = [
+    "ignore::DeprecationWarning:bedrock_agentcore.*",
+    "ignore:Support for class-based `config`:DeprecationWarning",
+]
+
+[tool.ruff]
+line-length = 120
+target-version = "py313"
+extend-exclude = ["frontend"]
+
+[tool.ruff.lint]
+# pycodestyle, pyflakes, import order, pyupgrade, bugbear, simplify
+select = ["E", "W", "F", "I", "UP", "B", "SIM"]

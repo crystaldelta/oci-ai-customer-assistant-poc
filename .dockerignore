@@ -1,0 +1,20 @@
+# Keep the build context small; only src/ and requirements.txt are copied into an image.
+# The content index is not: the AgentCore image loads it from the index store (AD-22).
+.venv/
+**/__pycache__/
+*.pyc
+*.egg-info/
+.git/
+.pytest_cache/
+.env
+.env.example
+.DS_Store
+docs/
+scripts/
+Dockerfile
+.dockerignore
+docker-compose.yml
+*.md
+data/
+tests/
+frontend/
