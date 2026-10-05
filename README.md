@@ -8,6 +8,7 @@ script and has a working local conversation on day one, on synthetic sample cont
 
 It implements the `ai-project` skill (Crystal Delta's blueprint; `ai-project-aws` and
 `ai-project-azure` for the cloud side), with the client-specific parts of its origin removed.
+Those skills and the `langfuse` skill come with the repo, in [.claude/skills/](.claude/skills/).
 
 Origin: derived from ea-customer-bot (`~/Projects/ea-customer-bot`), the EnergyAustralia customer assistant.
 

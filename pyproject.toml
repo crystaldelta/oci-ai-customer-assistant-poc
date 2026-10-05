@@ -26,7 +26,7 @@ filterwarnings = [
 [tool.ruff]
 line-length = 120
 target-version = "py313"
-extend-exclude = ["frontend"]
+extend-exclude = ["frontend", ".claude"]  # the skills' code sketches are compact on purpose
 
 [tool.ruff.lint]
 # pycodestyle, pyflakes, import order, pyupgrade, bugbear, simplify
