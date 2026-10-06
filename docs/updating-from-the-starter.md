@@ -57,7 +57,7 @@ git add -A && git diff --cached --binary > ../starter-changes.patch
 git diff --cached --stat | tail -1
 ```
 
-The last line prints the size of the change; for the crawler, about `33 files changed`.
+The last line prints the size of the change; for the crawler, about `37 files changed`.
 
 ## 3. Apply it to your project
 
