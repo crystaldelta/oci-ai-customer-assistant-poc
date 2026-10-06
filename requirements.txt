@@ -15,6 +15,8 @@ anyio==4.15.1
     #   watchfiles
 backoff==2.2.1
     # via langfuse
+beautifulsoup4==4.15.0
+    # via -r requirements.in
 bedrock-agentcore==1.24.0
     # via -r requirements.in
 boto3==1.43.106
@@ -280,6 +282,8 @@ six==1.17.0
     # via python-dateutil
 sniffio==1.3.1
     # via langsmith
+soupsieve==2.10
+    # via beautifulsoup4
 sqlite-vec==0.1.9
     # via langgraph-checkpoint-sqlite
 starlette==1.7.0
@@ -301,6 +305,7 @@ truststore==0.10.4 ; sys_platform != 'emscripten'
 typing-extensions==4.16.0
     # via
     #   anyio
+    #   beautifulsoup4
     #   bedrock-agentcore
     #   fastapi
     #   grpcio

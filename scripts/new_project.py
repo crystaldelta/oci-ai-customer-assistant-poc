@@ -165,7 +165,8 @@ Next steps (see README, "Start a new project"):
   4. {safety_step}
   5. Rewrite the prompts in src/{args.package}/prompts/ for the client's voice and services.
   6. Set the brand: --brand-* in frontend/src/styles.css and the words in frontend/src/brand.ts.
-  7. Replace content/ with the client's Markdown (title and url front matter), then refresh
+  7. Replace content/ with the client's Markdown (title and url front matter); for a website,
+     survey it first (scripts/survey_site.py, docs/website-content.md). Then refresh
      evals/site_titles.txt (scripts/run_scenarios.py --write-titles), evals/retrieval.yaml and
      the scenarios, and measure RETRIEVAL_MIN_SCORE with scripts/verify_retrieval.py.
   8. docker compose up -d --build, then python scripts/chat.py."""

@@ -24,7 +24,10 @@ synthetic sample corpus. Start every new project from it: copy it, run
 - `docs/templates/`: features document and feature register, DevOps request, crawl permission,
   safety wording approval, data-residency exception, demo covering message, retrospective;
 - `scripts/setup_langfuse.py` with `deploy/langfuse-setup.json`: score configs and the health
-  dashboard for a Langfuse project (`docs/langfuse-setup.md`).
+  dashboard for a Langfuse project (`docs/langfuse-setup.md`);
+- the website content pipeline (`docs/website-content.md`): `scripts/survey_site.py` and the
+  `site-survey` skill to check a site's crawlability first, then the crawler, cleaner and
+  scheduled sitemap refresh.
 
 What the first build took and where time went: `~/Projects/ea-customer-bot/docs/retrospective.md`.
 

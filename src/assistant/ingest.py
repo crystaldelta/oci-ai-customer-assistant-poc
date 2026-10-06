@@ -2,7 +2,8 @@
 
 Reads every `*.md` file in CONTENT_DIR (`content/` by default: Markdown with
 `title` and `url` front matter), chunks it by heading (`chunking.py`), embeds the
-chunks and recreates the collection.
+chunks and recreates the collection. If CONTENT_DIR holds a `LATEST` file, as
+`data/content` does after `clean.py`, the folder it names is read instead.
 
 Each chunk's payload carries the page's `source` (title), `url` and `file`, and
 its `headings`, plus any front matter field named in `PAGE_FIELDS`.
@@ -36,12 +37,18 @@ from assistant.chunking import chunk_page
 from assistant.retrieval import get_embeddings
 
 # Front matter copied to each chunk when present: add a field a search filters on (AD-16).
-PAGE_FIELDS = ("section", "lastmod")
+PAGE_FIELDS = ("section", "lastmod")  # both written by `clean.py` for website content
 # A body this long answers on its own, so a repeat under another heading is still a duplicate.
 # A shorter one ("Yes, free of charge", "Ten years") means something only under its heading, so
 # it is a duplicate only under the same heading.
 STANDALONE_CHARS = 200
 _FRONT_MATTER = re.compile(r"\A---\n(.*?)\n---\n", re.DOTALL)
+
+
+def content_folder(path: Path) -> Path:
+    """The folder to read: `path`, or the one its `LATEST` file names (`clean.py` writes it)."""
+    latest = path / "LATEST"
+    return path / latest.read_text().strip() if latest.is_file() else path
 
 
 def read_page(path: Path) -> tuple[str, dict]:
@@ -144,7 +151,7 @@ def main():
             print(f"Collection '{collection}' already has {existing} vectors; skipping ingestion.")
             return
 
-    content_dir = config.settings.content_dir
+    content_dir = content_folder(config.settings.content_dir)
     if not any(content_dir.glob("*.md")):
         raise SystemExit(
             f"No Markdown files found in {content_dir}. Put the content there (README, 'Content'), "

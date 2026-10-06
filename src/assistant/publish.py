@@ -13,7 +13,8 @@ change needs no redeploy. Each run:
 4. Publishes: the content, the index, then `LATEST.json`, which the agent watches.
 
 Getting the content into CONTENT_DIR is the project's job: copied from the client, exported from
-their CMS, or crawled and cleaned (README, "Content").
+their CMS, or crawled and cleaned (README, "Content"). For website content kept fresh on a
+schedule, `refresh.py` crawls, cleans and then publishes through `run`, with the raw snapshot.
 
 Exit codes: 0 published or nothing changed; 2 not published (no content, or a failed check).
 
@@ -25,6 +26,7 @@ Usage:
 
 import argparse
 import hashlib
+import json
 import tempfile
 from collections.abc import Callable
 from datetime import UTC, datetime
@@ -71,10 +73,13 @@ def run(
     work: Path,
     *,
     force: bool = False,
+    snapshot_dir: Path | None = None,
     embeddings=None,
     log: Callable[[str], None] = print,
 ) -> int:
-    """One publish, building in the folder `work`. `embeddings` is for tests."""
+    """One publish, building in the folder `work`. `snapshot_dir` is the raw website snapshot the
+    content was cleaned from (`refresh.py`): published with it, as the next refresh's baseline.
+    `embeddings` is for tests."""
     pages = sorted(content_dir.glob("*.md"))
     if not pages:
         log(f"Not published: no Markdown files in {content_dir}.")
@@ -101,13 +106,15 @@ def run(
         "points": points,
         "pages": len(pages),
     }
+    if snapshot_dir is not None:
+        new["snapshot_id"] = json.loads((snapshot_dir / "manifest.json").read_text())["snapshot_id"]
     found = problems(new, old)
     if found and not force:
         log("Not published: " + "; ".join(found) + ". Check the content, then publish with --force if it is right.")
         return NOT_PUBLISHED
     if found:
         log("Publishing anyway (--force): " + "; ".join(found))
-    store.publish(content_dir, index_dir, new)
+    store.publish(content_dir, index_dir, new, snapshot_dir=snapshot_dir)
     log(f"Published index {new['index']}: {new['pages']} pages, {new['points']} points")
     return PUBLISHED
 
@@ -122,7 +129,7 @@ def main() -> int:
         parser.error("INDEX_STORE is not set (s3://bucket/prefix, or a local folder)")
     store = open_store(config.settings.index_store, config.settings.aws_region)
     with tempfile.TemporaryDirectory(prefix="assistant-publish-") as work:
-        return run(store, config.settings.content_dir, Path(work), force=args.force)
+        return run(store, ingest.content_folder(config.settings.content_dir), Path(work), force=args.force)
 
 
 if __name__ == "__main__":

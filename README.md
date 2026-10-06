@@ -141,10 +141,21 @@ url: https://www.client.example/help/ways-to-pay
 
 `ingest.py` chunks each page by heading (`chunking.py`) and embeds the chunks. Getting the
 Markdown is the project's Phase 3, with the client's written permission: a CMS export, documents
-converted to Markdown, or a crawl of their website. For a website, the origin project (above) has
-a polite crawler (`snapshot.py`: robots.txt, random waits, stops on refusal, sitemap refresh) and an HTML
-cleaner (`clean.py`) to copy, with their tests. Keep client content out of git unless the client
-agrees; point `CONTENT_DIR` at a git-ignored folder under `data/`.
+converted to Markdown, or a crawl of their website. Keep client content out of git unless the
+client agrees; point `CONTENT_DIR` at a git-ignored folder under `data/`.
+
+**A website** goes through [docs/website-content.md](docs/website-content.md): survey it first,
+then get permission, crawl, clean, and refresh it on a schedule in the cloud. New to it? Do
+[the tutorial](docs/website-content-tutorial.md) first: the whole pipeline on Crystal Delta's own
+site, step by step, in about 30 minutes. In short:
+
+```bash
+.venv/bin/python scripts/survey_site.py https://www.client.example   # can it be crawled, and how? ~15 requests
+.venv/bin/python -m assistant.snapshot --max-pages 10                # after written permission: a trial
+.venv/bin/python -m assistant.snapshot                               # the SITE_SECTIONS, politely
+.venv/bin/python -m assistant.clean                                  # HTML to Markdown in data/content/
+CONTENT_DIR=data/content .venv/bin/python -m assistant.ingest
+```
 
 After a content change: re-ingest, refresh `evals/site_titles.txt`
 (`scripts/run_scenarios.py --write-titles`), update `evals/retrieval.yaml` and the scenarios, and
@@ -190,7 +201,8 @@ Every setting is in [.env.example](.env.example) with its default. The main ones
 | `RETRIEVER` | `qdrant` | |
 | `QDRANT_URL`, `QDRANT_PATH`, `QDRANT_COLLECTION` | `http://localhost:6333`, unset, `content` | `QDRANT_PATH`: an embedded index instead of the server |
 | `INDEX_STORE`, `INDEX_CHECK_SECONDS` | unset, `43200` | The published index (`s3://bucket/prefix` or a folder), used instead of Qdrant when set |
-| `CONTENT_DIR` | `content` | Markdown pages for ingest and publish |
+| `CONTENT_DIR` | `content` | Markdown pages for ingest and publish; `data/content` for a cleaned website snapshot |
+| `SITE_URL`, `SITE_SECTIONS`, `SITE_CONTENT_SELECTOR`, `SITE_OWN_403_HEADER` | unset, unset (the whole site), `main, [role=main], article`, unset | Website content ([docs/website-content.md](docs/website-content.md)); `scripts/survey_site.py` suggests them |
 | `ALLOWED_LINK_PREFIX` | `https://example.invalid/` | Only source URLs under it become links: the client's site |
 | `RETRIEVAL_TOP_K`, `RETRIEVAL_MAX_PER_PAGE` | 5, 1 | Places, and places per page |
 | `RETRIEVAL_MIN_SCORE`, `RETRIEVAL_MAX_GAP` | 0.62, 0.1 | Score floor for declining off-topic questions, and the gap cut; re-measure on the client's content |
@@ -238,7 +250,8 @@ provides for AWS:
 | --- | --- | --- | --- |
 | Agent | `agentcore` (the default) | AgentCore Runtime, arm64 | `GET /ping`, `POST /invocations` on 8080; `LLM_PROVIDER=bedrock` and `INDEX_STORE` set on the runtime |
 | API | `lambda` (with `--provenance=false`) | Lambda behind CloudFront | The API with the Lambda Web Adapter, calling the agent by ARN |
-| Content | none (`python -m assistant.publish`) | A developer machine, or a job a project adds on the `models` target | Publishes the index to S3 |
+| Content | none (`python -m assistant.publish`) | A developer machine | Publishes the index to S3 |
+| Website refresh | `refresh` | A scheduled container task (ECS Fargate) | Refreshes the site from its sitemap and publishes ([docs/website-content.md](docs/website-content.md)) |
 
 ```bash
 docker buildx build --platform linux/arm64 -t ai-starter-agentcore:$(git rev-parse --short HEAD) .
@@ -293,9 +306,13 @@ src/assistant/
   chunking.py    one chunk per heading section
   publish.py     content -> embedded index -> index store, LATEST.json last
   index_store.py the published content and indexes (S3, or a local folder)
+  snapshot.py    website: polite crawl of the sections, or a refresh from the sitemap
+  clean.py       website: snapshot HTML -> Markdown in data/content/
+  refresh.py     website: the scheduled refresh: sitemap, changed pages, clean, publish
 content/               synthetic sample pages the stack serves until the client's replace them
 scripts/
   new_project.py       rename the starter for a new project (deletes itself)
+  survey_site.py       survey a website before crawling it; a report and suggested settings
   chat.py              terminal chat client
   run_scenarios.py     run the behaviour scenarios
   verify_retrieval.py  retrieval check, expectations in evals/retrieval.yaml
@@ -308,7 +325,7 @@ evals/
   retrieval.yaml       retrieval expectations
 frontend/              React chat page (Vite); src/brand.ts and the top of src/styles.css hold the brand
 deploy/                cloud resources made outside Terraform: guardrail, CloudFront password function
-docs/                  PLAN, ARCHITECTURE, CI-CD, prompt management, guardrail, Langfuse setup, templates
+docs/                  PLAN, ARCHITECTURE, CI-CD, website content, prompt management, guardrail, Langfuse setup, templates
 tests/
   fakes.py             in-memory fakes for every seam
   fixtures/content/    synthetic pages for the unit tests

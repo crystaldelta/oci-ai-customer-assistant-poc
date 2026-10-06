@@ -1,6 +1,6 @@
 # ai-starter: architecture and design
 
-**Owner:** <name> · **Started:** 5 Oct 2026 · **Updated:** 5 Oct 2026
+**Owner:** <name> · **Started:** 5 Oct 2026 · **Updated:** 7 Oct 2026
 
 This document holds the design principles and the architecture decisions. The work plan and its
 open questions are in [PLAN.md](PLAN.md); how to run the code is in the [README](../README.md).
@@ -94,15 +94,17 @@ Request path: each customer question
                                                                         ├──▶ Langfuse: traces and prompts (AD-10, AD-11)
                                                                         └──▶ reads the index store: LATEST.json and the index
                                                                                      ▲
-Content path: on demand, or a scheduled job a project adds                           │ writes
-  python -m assistant.publish (content/ → embedded index → S3) ──────────────────────┘
+Content path: on demand, or the scheduled website refresh (AD-24)                    │ writes
+  python -m assistant.publish (content/ → embedded index → S3) ──────────────────────┤
+  python -m assistant.refresh (site sitemap → changed pages → clean → publish) ───────┘
 ```
 
 | Component | Runs on | Started by | Does |
 | --- | --- | --- | --- |
 | API | Lambda behind CloudFront | A question from the page | Checks the caller (signed thread IDs, limits) and passes the turn to the agent (AD-21) |
 | Agent | AgentCore Runtime | The API, one invocation per turn | Searches the published index and makes the turn's model calls (AD-20) |
-| Publish | A developer machine, or a job a project schedules | A content change | Builds the index from the Markdown and publishes it (AD-22) |
+| Publish | A developer machine | A content change | Builds the index from the Markdown and publishes it (AD-22) |
+| Refresh (website content) | A scheduled container task (`refresh` target) | A schedule, twice a day on the first project | Fetches the pages whose sitemap `lastmod` changed, cleans them and publishes (AD-24) |
 
 ### Cloud environment (DevOps stages)
 
@@ -147,7 +149,8 @@ example a WAF, private networking, long-term memory, a scheduled crawl, producti
 | AD-20 | 5 Oct 2026 | Agent image | One Dockerfile with targets from one base: `api` (local stack), `lambda` (the API on Lambda), `models` (the embedding model built in, a non-root user) and `agentcore` (the default: the AgentCore Runtime entry point on 8080, arm64). The AgentCore session is the conversation; its ID is the thread key's SHA-256, never the signed ID | The cloud entry point is a thin adapter, testable locally under the `agentcore` Compose profile | Inherited from the starter; confirm or supersede |
 | AD-21 | 5 Oct 2026 | Where a turn runs; hosted demo | `agent_client.py`: `AGENT_RUNTIME=in_process` locally, `agentcore` by ARN in the cloud or by URL against the local container. For demos, CloudFront with a password function (`deploy/cloudfront-password.js`) serves the page from S3 and `/api/*` from the API on Lambda through a function URL with origin access control; the page sends the body's SHA-256 | The browser never calls the agent runtime; the API holds what a public endpoint needs | Inherited from the starter; confirm or supersede |
 | AD-22 | 5 Oct 2026 | Published index | `python -m assistant.publish` builds an embedded Qdrant index from `CONTENT_DIR` and publishes it to `INDEX_STORE` (S3 or a folder): the content, the index, then `LATEST.json` last. A new index with under 90% of the published pages or points, or another embedding model, is held back (exit 2; `--force`). The agent downloads the index on its first search and checks for a newer one every `INDEX_CHECK_SECONDS` | No vector service to run in the cloud; a content change needs no redeploy | Inherited from the starter; confirm or supersede |
-| AD-23 | 5 Oct 2026 | Content source | The starter's pipeline starts from Markdown files with `title` and `url` front matter. Getting them (a crawl and clean of the client's site, a CMS export, documents) is the project's Phase 3; a polite crawler and cleaner exist in the first project to copy when needed | Keeps the starter small and the content source a project decision, made with the client's written permission | Inherited from the starter; confirm or supersede |
+| AD-23 | 5 Oct 2026 | Content source | The starter's pipeline starts from Markdown files with `title` and `url` front matter. Getting them (a crawl and clean of the client's site, a CMS export, documents) is the project's Phase 3; a polite crawler and cleaner exist in the first project to copy when needed | Keeps the starter small and the content source a project decision, made with the client's written permission | Superseded by AD-24 |
+| AD-24 | 7 Oct 2026 | Website content | The pipeline still starts from Markdown (AD-23's format). For a website, the starter carries the first project's pipeline, made general: `scripts/survey_site.py` surveys the site first (robots.txt, sitemap, protection, script rendering, content selector); `snapshot.py` crawls the `SITE_SECTIONS` politely (named user agent, `robots.txt`, one request at a time with a random 0.25–1.75 s wait, stop on 429 or a 403 the site did not produce); `clean.py` turns the HTML into Markdown from `SITE_CONTENT_SELECTOR`; `refresh.py` refreshes from the sitemap's `lastmod` on a schedule and publishes through `publish.run`, keeping the raw snapshot in the index store as the next baseline. Full crawls are manual. Only with the client's written permission; see [website-content.md](website-content.md) | Websites are the usual content source, and the survey settles crawlability before the permission request; the crawler's politeness rules travel with the code instead of being re-derived | Inherited from the starter; confirm or supersede (a project whose content is not a website deletes the modules) |
 
 ### Adding a decision
 

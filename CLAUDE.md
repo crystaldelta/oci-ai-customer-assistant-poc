@@ -80,6 +80,13 @@ and set up Langfuse (`docs/langfuse-setup.md`).
   `LATEST.json` last, holding back an index under 90% of the published one. With `INDEX_STORE`
   set the retriever downloads the published index on its first search and swaps in a newer one
   every `INDEX_CHECK_SECONDS`, so a content change needs no rebuild.
+- **Website content** (AD-24, `docs/website-content.md`): `scripts/survey_site.py` (or the
+  `site-survey` skill) surveys a site before anything else; then, only with the client's written
+  permission, `snapshot.py` crawls the `SITE_SECTIONS` into `data/snapshots/`, `clean.py` writes
+  Markdown into `data/content/<id>/` (named by `LATEST`, which `ingest.content_folder` follows),
+  and `refresh.py` is the scheduled job: sitemap refresh, clean, then `publish.run` with the raw
+  snapshot (the next refresh's baseline, `snapshots/` in the store). A site's own structures go in
+  `clean._Renderer`, each with a synthetic test. The politeness rules are in Pitfalls.
 - **Prompts** (AD-11) are edited in Langfuse; `prompts/*.md` are the fallback, served when Langfuse
   is unreachable, its keys are unset or a version fails `prompts.problem`, and copied from
   Langfuse at each release by `scripts/pull_prompts.py` (`versions.json`; see
@@ -143,6 +150,11 @@ and set up Langfuse (`docs/langfuse-setup.md`).
   macOS (exit 134) after every test has passed.
 - **`requirements.txt` is a lock; edit `requirements.in`** and re-lock with the `uv pip compile`
   command in the README. Keep `--universal`.
+- **The crawler's waits and stop on refusal are deliberate.** Never shorten the random wait, send
+  requests in parallel, retry around a 429 or a refusing 403, change the user agent, or schedule
+  a full crawl; ask the client to allow the crawler instead. No request to a client's site beyond
+  the survey before written permission. Raw pages and cleaned content stay in `data/`, never in
+  git or `tests/fixtures/`.
 - **The test fixtures are synthetic and for unit tests only.** `tests/conftest.py` pins
   `CONTENT_DIR` to `tests/fixtures/content/` and `ALLOWED_LINK_PREFIX` to `example.invalid`. Never
   put client pages in them.
