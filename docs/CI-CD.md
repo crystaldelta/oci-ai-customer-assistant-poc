@@ -36,7 +36,9 @@ Today: the README's [Cloud](../README.md#cloud) section, run by hand.
 
 - [ ] **One Dockerfile, one target per runtime, `linux/arm64`:** `agentcore` (the default
       target) for the agent runtime, `lambda` (with `--provenance=false`) for the API behind
-      CloudFront, and any job image a project adds on top of `models`.
+      CloudFront, `refresh` for the scheduled website refresh (a container task), and any job
+      image a project adds on top of `models`. Lambda needs `--provenance=false` because it
+      rejects the extra attestation manifest `buildx` adds by default.
 - [ ] **Tags.** Tag every image with the commit SHA (`git rev-parse --short HEAD` at build
       time); never deploy `:latest`. Record the previous tag as the rollback.
 - [ ] **Scan the images** on push (ECR basic scanning, or the organisation's scanner).

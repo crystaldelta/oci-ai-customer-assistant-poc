@@ -1,7 +1,8 @@
 # Document templates
 
 Copy a template into `docs/` (or into the message or email it is for), fill the `<…>` fields and
-delete the guidance comments. Australian English, professional tone. Pricing or contract questions
+delete the guidance comments (the `<!-- … -->` blocks). "Phase 0" and the other phases are in
+[PLAN.md](../PLAN.md); an "AD" is an entry in [ARCHITECTURE.md](../ARCHITECTURE.md)'s decision log. Australian English, professional tone. Pricing or contract questions
 go to Crystal Delta's Sales team, never into these documents.
 
 | Template | Audience | When |

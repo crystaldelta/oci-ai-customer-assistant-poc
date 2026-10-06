@@ -33,6 +33,9 @@ once or twice, not in a loop.
 
 ## Before you start
 
+New to the starter itself? Do [the starter tutorial](tutorial.md) first: it explains how the
+assistant answers, which this tutorial builds on.
+
 You need the starter running on your machine, as in the README's "Quick start":
 
 ```bash

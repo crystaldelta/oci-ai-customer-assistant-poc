@@ -4,7 +4,9 @@ Crystal Delta's starter for AI assistants that answer customer questions from a 
 with citations, safety rules first, and a streaming chat page. Start with
 [docs/PLAN.md](docs/PLAN.md) (the work plan, by phase). Design principles and the architecture
 decision log are in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): follow the principles, and record
-any new architecture decision there. Setup and layout are in [README.md](README.md). The
+any new architecture decision there. Setup and layout are in [README.md](README.md); a developer
+new to the starter should start with [docs/tutorial.md](docs/tutorial.md), which shows real
+outputs, so update it when a change alters a command or its output there. The
 blueprint this implements is the `ai-project` skill (with `ai-project-aws` or `ai-project-azure`).
 Those skills and `langfuse` are in [.claude/skills/](.claude/skills/), so they load for anyone
 working in the repo; they are copies, so an improvement to one belongs in the shared skill too.

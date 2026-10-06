@@ -4,7 +4,7 @@ Run it once, in the copy, before anything else:
 
     cp -R ai-starter acme-helper && cd acme-helper && rm -rf .git .venv frontend/node_modules
     python3 scripts/new_project.py --project acme-helper --package acme_helper \\
-        --client "Acme Services" --link-prefix https://www.acme.example/
+        --client "Acme Services" --link-prefix https://www.acme.example/ --safety-rules yes
 
 It changes, in every text file in the copy:
 

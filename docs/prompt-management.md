@@ -54,8 +54,13 @@ protect only the number, not the wording. Never use a model to write or change i
 1. Open the prompt in Langfuse and create a new version. Leave **Set the "production" label**
    unticked; add the `staging` label instead.
 2. Try it on a local stack that serves `staging`: in `.env`, set `PROMPT_SOURCE=langfuse`,
-   `PROMPT_LABEL=staging` and the keys of the project you edited. Then hold a conversation
-   with `scripts/chat.py` that exercises the prompt. For a change to how answers are written,
+   `PROMPT_LABEL=staging` and the keys of the project you edited, then recreate the API
+   (`docker compose up -d api`; `.env` is read only when the container is created). Compose
+   points the `api` container at the local Langfuse (`LANGFUSE_HOST=http://langfuse:3000`), so
+   make the edit in the local Langfuse project; to try a cloud project's prompt, run the API
+   outside Docker (`.venv/bin/uvicorn assistant.api:app --port 8001`) with its `LANGFUSE_HOST`.
+   Then hold a conversation with `scripts/chat.py` (with `--api http://localhost:8001` for the
+   API outside Docker) that exercises the prompt. For a change to how answers are written,
    also run `.venv/bin/python scripts/run_scenarios.py` and compare with the last run.
 3. Promote it: in Langfuse, add the `production` label to the new version. Answers use it
    within a minute.
@@ -90,8 +95,8 @@ built. Until there is a pipeline (see [CI-CD.md](CI-CD.md)), whoever builds the 
 `scripts/pull_prompts.py --check` writes nothing and exits 1 when the files differ from
 Langfuse. The README's image build steps start with it.
 
-A skipped sync does not change answers. The image's fallback is older than Langfuse, and the
-service reports this: it logs `prompt 'system': Langfuse v9, the image's fallback is v7` once.
+If someone skips the sync, answers do not change, because the service still serves Langfuse.
+Only the fallback files in the image are out of date, and the service reports this: it logs `prompt 'system': Langfuse v9, the image's fallback is v7` once.
 Locally, `/api/health` also lists the prompt under `prompts.stale`. In the cloud the health check
 is the API's own, so the agent's log is the place to look.
 
