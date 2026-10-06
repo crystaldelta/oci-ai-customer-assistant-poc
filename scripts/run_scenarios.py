@@ -26,6 +26,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(ROOT), str(ROOT / "src")]
 
 from assistant.config import settings  # noqa: E402
+
 from evals import scenarios  # noqa: E402
 
 MARKS = {"pass": "✓", "fail": "✗", "skip": "–"}

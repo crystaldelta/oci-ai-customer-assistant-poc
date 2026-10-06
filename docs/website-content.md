@@ -6,6 +6,9 @@ For a project whose content is the client's public website (AD-24). The pipeline
 first project (ea-customer-bot), then made general here. Content from a CMS export or documents
 skips all of this: put the Markdown in `CONTENT_DIR` (README, "Content").
 
+**A project made before the crawler joined the starter** can bring it in:
+[updating-from-the-starter.md](updating-from-the-starter.md).
+
 **First time?** Work through [the tutorial](website-content-tutorial.md): every step below, on
 Crystal Delta's own site, with the output you should see. This page is the reference.
 

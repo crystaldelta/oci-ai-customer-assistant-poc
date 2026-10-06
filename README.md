@@ -84,7 +84,8 @@ safety-critical situations (someone in danger). `no` turns the danger rules off
 they can be turned on later.
 
 The script prints the next steps, then deletes itself. `--dry-run` lists what it would change
-and changes nothing. Then, in order (details in [docs/PLAN.md](docs/PLAN.md)):
+and changes nothing. A later starter change can still be brought into the project:
+[docs/updating-from-the-starter.md](docs/updating-from-the-starter.md). Then, in order (details in [docs/PLAN.md](docs/PLAN.md)):
 
 1. Intake (the `ai-project` skill's questions) into PLAN.md; confirm or supersede each decision in
    ARCHITECTURE.md marked "Inherited from the starter".
