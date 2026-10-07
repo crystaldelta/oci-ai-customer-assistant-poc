@@ -6,9 +6,16 @@ format: a starting point to confirm with the client and adjust per project (`nam
 messages, and which PII types to act on). On Azure the same seam would apply Azure AI Content
 Safety; see the `ai-project-azure` skill.
 
-The service applies it with `GUARDRAIL=bedrock` (see [Turn it on](#turn-it-on)). It checks a
-question after the behaviour rules, so the emergency reply never depends on it, and an answer
-against the passages it was written from. A failed check allows the text.
+The service applies it with `GUARDRAIL=bedrock` (see [Turn it on](#turn-it-on)). It checks each
+customer question and each answer:
+
+- **The question**, after the behaviour rules have run, so the emergency reply never depends on
+  the guardrail.
+- **The answer**, against the content passages it was written from (the *grounding* check: is
+  every claim supported by those passages?).
+
+If a check fails to run (an AWS error, say), the text is allowed through: the guardrail is a
+second line of defence, not a dependency of answering.
 
 ## What the starter definition does
 

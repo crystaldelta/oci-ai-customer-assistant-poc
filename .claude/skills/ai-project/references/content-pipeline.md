@@ -1,7 +1,26 @@
 # Content pipeline (RAG)
 
 Reference: ea-customer-bot `snapshot.py`, `clean.py`, `chunking.py`, `ingest.py`, `refresh.py`,
-`index_store.py`, `retrieval.py`; AD-22, AD-23, AD-31, AD-33 to AD-35.
+`index_store.py`, `retrieval.py`; AD-22, AD-23, AD-31, AD-33 to AD-35. The starter
+(`~/Projects/ai-starter`) carries a general version of the website pipeline (its AD-24 and
+`docs/website-content.md`): the site, sections and content selector are settings.
+
+## Survey first
+
+Before the permission request, survey the site: `scripts/survey_site.py` in the starter (or its
+`site-survey` skill) reads `robots.txt`, the sitemaps and about ten sampled pages with the
+crawler's own politeness, and reports a verdict and suggested settings. It settles early what
+decides the approach:
+
+- **Content built in the browser** (little text in the HTML, an empty app root): this pipeline
+  cannot read it. Ask for a CMS export or API; a headless browser is a new decision.
+- **Bot protection** (Akamai, Cloudflare, Imperva, ...): may let a few requests through and stop
+  a long crawl. Name the user agent in the permission request.
+- **AI-bot rules in `robots.txt`**: the owner's position on AI use; raise it with the client.
+- **A sitemap with `lastmod`**: what makes a cheap scheduled refresh possible.
+- **The content element** (`main`, `article`, a site-specific block): the cleaner's selector.
+
+Record the findings and a log of every request to the site in the project's `docs/site.md`.
 
 ## Permission and politeness
 

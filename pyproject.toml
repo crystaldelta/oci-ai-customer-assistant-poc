@@ -31,3 +31,7 @@ extend-exclude = ["frontend", ".claude"]  # the skills' code sketches are compac
 [tool.ruff.lint]
 # pycodestyle, pyflakes, import order, pyupgrade, bugbear, simplify
 select = ["E", "W", "F", "I", "UP", "B", "SIM"]
+
+[tool.ruff.lint.isort]
+# `evals` in a section of its own, so the import order holds after new_project.py renames the package.
+known-local-folder = ["evals"]

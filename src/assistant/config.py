@@ -88,9 +88,26 @@ class Settings(BaseSettings):
     max_gap: float = Field(0.1, validation_alias="RETRIEVAL_MAX_GAP")
     embedding_model: str = "BAAI/bge-base-en-v1.5"
     embedding_cache_dir: str | None = Field(None, validation_alias="FASTEMBED_CACHE_PATH")
-    # What ingest and publish read: Markdown pages with `title` and `url` front matter. The sample
-    # in `content/` is synthetic; replace it with the client's. The unit tests pin their own fixtures.
+    # What ingest and publish read: Markdown pages with `title` and `url` front matter, or the
+    # folder its `LATEST` file names (`data/content`, which `clean.py` writes). The sample in
+    # `content/` is synthetic; replace it with the client's. The unit tests pin their own fixtures.
     content_dir: Path = Field(ROOT / "content", validation_alias="CONTENT_DIR")
+
+    # ---- Website content (AD-24, docs/website-content.md): only with the client's written
+    # permission. `snapshot.py` fetches raw HTML into `snapshot_dir`; `clean.py` writes Markdown
+    # into `site_content_dir`, one folder per snapshot. Both git-ignored.
+    # The site to crawl; unset means the origin of `allowed_link_prefix`.
+    site_url: str = ""
+    # Path prefixes to crawl, comma-separated, in priority order: "/help,/faq,/blog".
+    site_sections: str = ""
+    # CSS selector for a page's main content; the first that matches on the page is used.
+    # `scripts/survey_site.py` suggests one.
+    site_content_selector: str = "main, [role=main], article"
+    # A header prefix that marks a 403 as the site's own page (Drupal's archived pages carry
+    # `x-drupal-`). Unset: every 403 stops the crawl as a refusal.
+    site_own_403_header: str = ""
+    snapshot_dir: Path = ROOT / "data" / "snapshots"
+    site_content_dir: Path = ROOT / "data" / "content"
 
     # ---- Citations: only a source URL starting with this becomes a link (the client's own site).
     # A source elsewhere keeps its title but loses its URL, so no caller can link it.

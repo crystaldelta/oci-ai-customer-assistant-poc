@@ -8,10 +8,14 @@ script and has a working local conversation on day one, on synthetic sample cont
 
 It implements the `ai-project` skill (Crystal Delta's blueprint; `ai-project-aws` and
 `ai-project-azure` for the cloud side), with the client-specific parts of its origin removed.
-Those skills and the `langfuse` skill come with the repo, in [.claude/skills/](.claude/skills/).
+Those skills, the `langfuse` skill and the `site-survey` skill come with the repo, in
+[.claude/skills/](.claude/skills/), so Claude Code loads them for anyone working here.
 
-Origin: derived from ea-customer-bot (`~/Projects/ea-customer-bot`), the EnergyAustralia customer assistant.
+Origin: derived from [ea-customer-bot](https://github.com/crystaldelta/ea-customer-bot), the
+EnergyAustralia customer assistant.
 
+- **New here? Start with [the tutorial](docs/tutorial.md):** what the starter does, how it is
+  built and why, a walk through the code, and how to start your own project from it.
 - **Work plan:** [docs/PLAN.md](docs/PLAN.md)
 - **Architecture, principles and decisions:** [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 - **For Claude Code:** [CLAUDE.md](CLAUDE.md)
@@ -21,17 +25,22 @@ Origin: derived from ea-customer-bot (`~/Projects/ea-customer-bot`), the EnergyA
 ## Quick start
 
 Needs Docker, Python 3.13, Node 22 (for the page) and [Ollama](https://ollama.com) on the host.
+Ollama runs the language model outside Docker because Docker on macOS cannot use the GPU.
 
 ```bash
 ollama pull gpt-oss:20b     # about 13 GB; needs about 16 GB RAM
 # or: ollama pull qwen3:8b  # smaller machines; set OLLAMA_MODEL=qwen3:8b in .env
 
-docker compose up -d --build                     # qdrant, ingest (one-shot), api
-curl localhost:8000/api/health                   # ollama_ok and qdrant_ok true, points > 0
-python3.13 -m venv .venv && .venv/bin/pip install -r requirements.txt -e .
+docker compose up -d --build                     # starts Qdrant (the search index), fills it once, starts the API
+curl localhost:8000/api/health                   # "ollama_ok": true, "qdrant_ok": true, "points": 27
+python3.13 -m venv .venv && .venv/bin/pip install -r requirements.txt -e .   # -e: edit the code without reinstalling
 .venv/bin/python scripts/chat.py                 # "How can I pay my bill?", then "Can I do that at the post office?"
-(cd frontend && npm install && npm run dev)      # http://localhost:5173
+(cd frontend && npm install && npm run dev)      # the chat page, on http://localhost:5173
 ```
+
+It works when the chat shows `[searching]`, `[generating]`, then an answer that streams in,
+followed by a numbered list of the pages it came from. [The tutorial](docs/tutorial.md) shows
+each step's output.
 
 Every setting has a default and no API keys are needed; `cp .env.example .env` to change any.
 The stack answers from `content/`, seven synthetic pages of a fictional organisation
@@ -48,6 +57,9 @@ COMPOSE_PROJECT_NAME=ai-starter API_PORT=8100 QDRANT_PORT=6433 docker compose up
 
 ## Start a new project
 
+From the folder that holds `ai-starter` ([the tutorial](docs/tutorial.md#part-7-start-your-own-project)
+walks through it):
+
 ```bash
 cp -R ai-starter acme-helper && cd acme-helper
 rm -rf .git .venv data frontend/node_modules frontend/dist src/*.egg-info
@@ -58,15 +70,22 @@ python3.13 -m venv .venv && .venv/bin/pip install -r requirements.txt -e .
 .venv/bin/pytest -q
 ```
 
-`new_project.py` renames the package (`src/assistant/` and every import and command), the project
-name (pyproject, the Compose project and image tags, the local Langfuse project, the Langfuse
-prompt prefix, trace tags and log names), the client's name in `frontend/src/brand.ts` and the
-citation link prefix (`ALLOWED_LINK_PREFIX`, `brand.ts`). `--safety-rules yes|no` is required:
-ask the client whether the assistant meets safety-critical situations (someone in danger) before
-running it; `no` turns the danger rules off (`SAFETY_RULES=false`) and deletes the emergency
-scenarios, keeping the mechanism and its tests so they can be turned on later. Then it prints the next steps and deletes
-itself. `--dry-run` lists what it would change. Then, in order (details in
-[docs/PLAN.md](docs/PLAN.md)):
+`new_project.py` renames:
+
+- the package: `src/assistant/` and every import and command;
+- the project name: pyproject, the Compose project and image tags, the local Langfuse project,
+  the Langfuse prompt prefix, trace tags and log names;
+- the client's name, in `frontend/src/brand.ts`;
+- the citation link prefix: `ALLOWED_LINK_PREFIX` and `brand.ts`.
+
+`--safety-rules yes|no` is required, so ask the client first whether the assistant will meet
+safety-critical situations (someone in danger). `no` turns the danger rules off
+(`SAFETY_RULES=false`) and deletes the emergency scenarios; the mechanism and its tests stay, so
+they can be turned on later.
+
+The script prints the next steps, then deletes itself. `--dry-run` lists what it would change
+and changes nothing. A later starter change can still be brought into the project:
+[docs/updating-from-the-starter.md](docs/updating-from-the-starter.md). Then, in order (details in [docs/PLAN.md](docs/PLAN.md)):
 
 1. Intake (the `ai-project` skill's questions) into PLAN.md; confirm or supersede each decision in
    ARCHITECTURE.md marked "Inherited from the starter".
@@ -96,6 +115,8 @@ docker compose down -v                                        # stop and wipe th
 docker compose run --rm ingest python -m assistant.ingest     # re-ingest after a content change
 ```
 
+The API does not watch the content folder: after changing a page in `CONTENT_DIR`, re-ingest.
+
 With tracing: `docker compose --profile tracing up -d --build`, then set the Langfuse keys in
 `.env` (see `.env.example`), recreate the API (`docker compose up -d api`) and open
 <http://localhost:3000>. [docs/langfuse-setup.md](docs/langfuse-setup.md) sets up a project's score
@@ -114,9 +135,10 @@ configs and dashboard.
 The behaviour scenarios in `evals/scenarios/` are scripted conversations, one YAML file per
 category (emergency, follow-up, handoff, not-in-content, out-of-scope). Each turn gives the
 expected behaviour, the pages it should cite, phrases it must or must not contain, and an `ideal`
-answer in words. Locally only these deterministic checks run, plus checks that no phone number
-or price appears that is not in the cited content and that the answer has no tables or headings;
-answer quality is judged against `ideal` on the production model in Phase 6. `--only <id>` runs
+answer in words. Locally, only automatic checks run: the behaviour, the cited pages, the
+required and forbidden phrases, no phone number or price that is not in the cited content, and no
+tables or headings. Answer quality is judged against `ideal` later, on the production model
+(Phase 6). `--only <id>` runs
 one scenario, `-v` shows every check and answer, `--api` points at another port. Do not expect
 every scenario to pass on a small local model: compare runs.
 
@@ -141,10 +163,21 @@ url: https://www.client.example/help/ways-to-pay
 
 `ingest.py` chunks each page by heading (`chunking.py`) and embeds the chunks. Getting the
 Markdown is the project's Phase 3, with the client's written permission: a CMS export, documents
-converted to Markdown, or a crawl of their website. For a website, the origin project (above) has
-a polite crawler (`snapshot.py`: robots.txt, random waits, stops on refusal, sitemap refresh) and an HTML
-cleaner (`clean.py`) to copy, with their tests. Keep client content out of git unless the client
-agrees; point `CONTENT_DIR` at a git-ignored folder under `data/`.
+converted to Markdown, or a crawl of their website. Keep client content out of git unless the
+client agrees; point `CONTENT_DIR` at a git-ignored folder under `data/`.
+
+**A website** goes through [docs/website-content.md](docs/website-content.md): survey it first,
+then get permission, crawl, clean, and refresh it on a schedule in the cloud. New to it? Do
+[the tutorial](docs/website-content-tutorial.md) first: the whole pipeline on Crystal Delta's own
+site, step by step, in about 30 minutes. In short:
+
+```bash
+.venv/bin/python scripts/survey_site.py https://www.client.example   # can it be crawled, and how? ~15 requests
+.venv/bin/python -m assistant.snapshot --max-pages 10                # after written permission: a trial
+.venv/bin/python -m assistant.snapshot                               # the SITE_SECTIONS, politely
+.venv/bin/python -m assistant.clean                                  # HTML to Markdown in data/content/
+CONTENT_DIR=data/content .venv/bin/python -m assistant.ingest
+```
 
 After a content change: re-ingest, refresh `evals/site_titles.txt`
 (`scripts/run_scenarios.py --write-titles`), update `evals/retrieval.yaml` and the scenarios, and
@@ -180,7 +213,8 @@ image.
 
 ## Settings
 
-Every setting is in [.env.example](.env.example) with its default. The main ones:
+Every setting is in [.env.example](.env.example) with its default, and in
+`src/assistant/config.py`. The main ones:
 
 | Variable | Default | Notes |
 | --- | --- | --- |
@@ -190,19 +224,21 @@ Every setting is in [.env.example](.env.example) with its default. The main ones
 | `RETRIEVER` | `qdrant` | |
 | `QDRANT_URL`, `QDRANT_PATH`, `QDRANT_COLLECTION` | `http://localhost:6333`, unset, `content` | `QDRANT_PATH`: an embedded index instead of the server |
 | `INDEX_STORE`, `INDEX_CHECK_SECONDS` | unset, `43200` | The published index (`s3://bucket/prefix` or a folder), used instead of Qdrant when set |
-| `CONTENT_DIR` | `content` | Markdown pages for ingest and publish |
+| `CONTENT_DIR` | `content` | Markdown pages for ingest and publish; `data/content` for a cleaned website snapshot |
+| `SITE_URL`, `SITE_SECTIONS`, `SITE_CONTENT_SELECTOR`, `SITE_OWN_403_HEADER` | unset, unset (the whole site), `main, [role=main], article`, unset | Website content ([docs/website-content.md](docs/website-content.md)); `scripts/survey_site.py` suggests them |
 | `ALLOWED_LINK_PREFIX` | `https://example.invalid/` | Only source URLs under it become links: the client's site |
 | `RETRIEVAL_TOP_K`, `RETRIEVAL_MAX_PER_PAGE` | 5, 1 | Places, and places per page |
 | `RETRIEVAL_MIN_SCORE`, `RETRIEVAL_MAX_GAP` | 0.62, 0.1 | Score floor for declining off-topic questions, and the gap cut; re-measure on the client's content |
 | `MEMORY`, `MEMORY_PATH` | `sqlite`, `data/memory.sqlite` | `in_process`; `agentcore` arrives in Phase 6 |
 | `SAFETY_RULES` | `true` | `false` turns off the danger rules and the fixed `emergency` reply, for a project with no safety-critical situations (agreed with the client) |
-| `GUARDRAIL`, `GUARDRAIL_ID`, `GUARDRAIL_VERSION` | `noop` | `bedrock` applies a Bedrock Guardrail ([docs/guardrail.md](docs/guardrail.md)) |
+| `GUARDRAIL`, `GUARDRAIL_ID`, `GUARDRAIL_VERSION` | `noop`, unset, unset | `bedrock` applies a Bedrock Guardrail ([docs/guardrail.md](docs/guardrail.md)) |
 | `PROMPT_SOURCE`, `PROMPT_LABEL` | `file`, `production` | `langfuse` serves Langfuse, with the files as fallback |
-| `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_HOST` | unset | Tracing and Langfuse prompts; off without the keys |
+| `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_HOST` | unset, unset, `http://localhost:3000` | Tracing and Langfuse prompts; off without the keys. Compose points the `api` container at the local Langfuse |
 | `THREAD_ID_SECRET` | unset | 32+ characters for anything shared; unset means a random secret per process |
 | `MAX_QUESTION_CHARS`, `MAX_TURNS_PER_THREAD`, `RATE_LIMIT_PER_MINUTE` | 2000, 30, 20 | Abuse limits |
 | `CLIENT_ADDRESS_HEADER` | unset | Behind CloudFront: `CloudFront-Viewer-Address` |
-| `AGENT_RUNTIME`, `AGENTCORE_URL`, `AGENTCORE_RUNTIME_ARN` | `in_process` | `agentcore`: the API runs turns on the agent runtime |
+| `AGENT_RUNTIME`, `AGENTCORE_URL`, `AGENTCORE_RUNTIME_ARN`, `AGENTCORE_QUALIFIER` | `in_process`, `http://localhost:8080`, unset, `DEFAULT` | `agentcore`: the API runs turns on the agent runtime |
+| `CITED_SOURCES_ONLY`, `REWRITE_FOLLOW_UPS` | `true`, `true` | Sources are only the cited pages; follow-ups are rewritten before the search |
 
 Compose only: `COMPOSE_PROJECT_NAME` (`ai-starter`), `API_PORT` (8000), `QDRANT_PORT` (6333),
 `LANGFUSE_PORT` (3000), `AGENTCORE_PORT` (8080).
@@ -238,7 +274,8 @@ provides for AWS:
 | --- | --- | --- | --- |
 | Agent | `agentcore` (the default) | AgentCore Runtime, arm64 | `GET /ping`, `POST /invocations` on 8080; `LLM_PROVIDER=bedrock` and `INDEX_STORE` set on the runtime |
 | API | `lambda` (with `--provenance=false`) | Lambda behind CloudFront | The API with the Lambda Web Adapter, calling the agent by ARN |
-| Content | none (`python -m assistant.publish`) | A developer machine, or a job a project adds on the `models` target | Publishes the index to S3 |
+| Content | none (`python -m assistant.publish`) | A developer machine | Publishes the index to S3 |
+| Website refresh | `refresh` | A scheduled container task (ECS Fargate) | Refreshes the site from its sitemap and publishes ([docs/website-content.md](docs/website-content.md)) |
 
 ```bash
 docker buildx build --platform linux/arm64 -t ai-starter-agentcore:$(git rev-parse --short HEAD) .
@@ -293,22 +330,28 @@ src/assistant/
   chunking.py    one chunk per heading section
   publish.py     content -> embedded index -> index store, LATEST.json last
   index_store.py the published content and indexes (S3, or a local folder)
+  snapshot.py    website: polite crawl of the sections, or a refresh from the sitemap
+  clean.py       website: snapshot HTML -> Markdown in data/content/
+  refresh.py     website: the scheduled refresh: sitemap, changed pages, clean, publish
 content/               synthetic sample pages the stack serves until the client's replace them
 scripts/
   new_project.py       rename the starter for a new project (deletes itself)
+  survey_site.py       survey a website before crawling it; a report and suggested settings
   chat.py              terminal chat client
   run_scenarios.py     run the behaviour scenarios
   verify_retrieval.py  retrieval check, expectations in evals/retrieval.yaml
   push_prompts.py      seed Langfuse with the prompts it lacks
   pull_prompts.py      copy the Langfuse prompts into the repo files (each release)
+  setup_langfuse.py    a Langfuse project's score configs and dashboard (deploy/langfuse-setup.json)
 evals/
   scenarios/           scripted conversations, one file per category
   scenarios.py         loading, checks and running
   site_titles.txt      the page titles scenarios may cite
   retrieval.yaml       retrieval expectations
 frontend/              React chat page (Vite); src/brand.ts and the top of src/styles.css hold the brand
-deploy/                cloud resources made outside Terraform: guardrail, CloudFront password function
-docs/                  PLAN, ARCHITECTURE, CI-CD, prompt management, guardrail, Langfuse setup, templates
+deploy/                cloud resources made outside Terraform: guardrail, CloudFront password function, Langfuse setup
+docs/                  tutorials, PLAN, ARCHITECTURE, CI-CD, website content, prompt management, guardrail, Langfuse setup, templates
+.claude/skills/        the ai-project, langfuse and site-survey skills, for Claude Code
 tests/
   fakes.py             in-memory fakes for every seam
   fixtures/content/    synthetic pages for the unit tests

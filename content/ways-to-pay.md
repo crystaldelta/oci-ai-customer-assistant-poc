@@ -7,7 +7,9 @@ note: Synthetic sample content for the starter. Not any organisation's real cont
 
 # Ways to pay your bill
 
-You can pay your bill in several ways. Choose the one that suits you best.
+You can pay your bill by direct debit, by card in your online account or the app, by BPAY, in
+person at a post office, or in instalments with a payment plan. Choose the one that suits you
+best.
 
 ## Direct debit
 

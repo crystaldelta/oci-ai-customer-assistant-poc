@@ -7,6 +7,7 @@ import pytest
 
 from assistant import config
 from assistant import service as svc
+
 from evals import scenarios
 from evals.scenarios import Expect, check_turn
 

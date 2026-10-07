@@ -24,6 +24,11 @@ os.environ.update(
         "THREAD_ID_SECRET": "",
         "INDEX_STORE": "",  # never a real bucket
         "ALLOWED_LINK_PREFIX": "https://example.invalid/",
+        # Website content: tests pass the site and sections themselves, never a real site.
+        "SITE_URL": "",
+        "SITE_SECTIONS": "",
+        "SITE_CONTENT_SELECTOR": "main, [role=main], article",
+        "SITE_OWN_403_HEADER": "",
         # As in assistant/__init__.py: onnxruntime's telemetry thread can abort Python at exit.
         "ORT_DISABLE_TELEMETRY": "1",
     }

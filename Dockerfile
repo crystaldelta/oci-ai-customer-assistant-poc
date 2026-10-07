@@ -9,7 +9,10 @@
 #                docker buildx build --platform linux/arm64 --provenance=false \
 #                  --target lambda -t ai-starter-lambda .
 #   models     the base with the embedding model built in and a user that is not root;
-#              the base of `agentcore`, and of any scheduled content job a project adds.
+#              the base of `agentcore` and `refresh`.
+#   refresh    the scheduled website content refresh (AD-24), for a project whose content
+#              is the client's website:
+#                docker buildx build --platform linux/arm64 --target refresh -t ai-starter-refresh .
 #   agentcore  the AgentCore Runtime image (the default target): the entry point on
 #              port 8080, with the embedding model built in. The content index is not:
 #              it comes from the index store (INDEX_STORE) at run time. Build it for arm64
@@ -68,6 +71,14 @@ ENV FASTEMBED_CACHE_PATH=/app/models
 RUN python -c "from assistant.retrieval import get_embeddings; get_embeddings()"
 ENV HF_HUB_OFFLINE=1
 RUN useradd --uid 10001 --no-create-home --shell /usr/sbin/nologin agent
+
+
+FROM models AS refresh
+
+# Run on a schedule with INDEX_STORE, SITE_URL, SITE_SECTIONS and SITE_CONTENT_SELECTOR set, and
+# a role that may read and write the store (docs/website-content.md).
+USER agent
+CMD ["python", "-m", "assistant.refresh"]
 
 
 FROM models AS agentcore

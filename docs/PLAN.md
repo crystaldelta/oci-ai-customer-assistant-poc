@@ -50,9 +50,15 @@ conversation with `scripts/chat.py` streams with sources.
 
 ### Phase 3 — Content pipeline / tools
 
+- [ ] For a website: the site surveyed (`scripts/survey_site.py`, or the `site-survey` skill);
+      verdict, settings and findings in `docs/site.md`; questions for the client below
 - [ ] Written permission from the client for the content and its scope
+      (`docs/templates/crawl-permission.md` for a website)
 - [ ] The client's content as Markdown in `CONTENT_DIR` (`title` and `url` front matter); for a
-      website, copy the crawler and cleaner from the first project (README, "Content")
+      website, crawled and cleaned ([website-content.md](website-content.md)), the cleaner
+      adapted and checked against the live pages
+- [ ] Content not from a website: `snapshot.py`, `clean.py`, `refresh.py`,
+      `scripts/survey_site.py` and their tests deleted, and AD-24 superseded
 - [ ] `content/` sample removed or kept out of the stack; `evals/site_titles.txt` refreshed
 - [ ] `ALLOWED_LINK_PREFIX` and `brand.ts` `linkPrefix` set to the client's site
 - [ ] `evals/retrieval.yaml` with the client's representative questions; `RETRIEVAL_MIN_SCORE`
@@ -78,6 +84,8 @@ conversation with `scripts/chat.py` streams with sources.
 
 - [ ] `agentcore` Compose profile answers from an index published to `data/store`
 - [ ] The local API calls it with `AGENT_RUNTIME=agentcore`
+- [ ] For a website: `INDEX_STORE=data/store python -m assistant.refresh --seed <snapshot>`,
+      then a second run refreshes with no change
 
 **Done when:** the cloud image answers locally, through the API, as it will in the cloud.
 

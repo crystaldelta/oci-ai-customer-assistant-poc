@@ -1,17 +1,22 @@
 """Where published content lives in the cloud (AD-22): the content and its indexes, in S3.
 
-`publish.py` publishes here, and the agent loads the newest index from here (`IndexSource`,
-used by `retrieval.QdrantRetriever`). `INDEX_STORE` names it: `s3://bucket/prefix`, or a local
-folder for tests and local runs. The layout under it, with no archives:
+`publish.py` (and `refresh.py`, for website content) publishes here, and the agent loads the
+newest index from here (`IndexSource`, used by `retrieval.QdrantRetriever`). `INDEX_STORE` names
+it: `s3://bucket/prefix`, or a local folder for tests and local runs. The layout under it, with
+no archives:
 
-    content/<content id>/*.md   the Markdown the index was built from, for review and rebuilds
-    indexes/<index>/...         an embedded Qdrant folder
-    LATEST.json                 what to load (below)
+    content/<content id>/*.md        the Markdown the index was built from, for review and rebuilds
+    snapshots/<snapshot id>/...      website content only: the raw snapshot the next refresh
+                                     starts from (manifest.json, sitemap.json, pages/*.html)
+    indexes/<index>/...              an embedded Qdrant folder
+    refused/<UTC time>.txt           a refresh the site refused, for review
+    LATEST.json                      what to load (below)
 
 `LATEST.json` is written last, so a reader never sees a half-published index. It lists the
 index's files, so the agent needs only `s3:GetObject`:
 
-    {"index", "content_id", "embedding_model", "collection", "points", "pages", "files", "published_at"}
+    {"index", "content_id", "snapshot_id" (website content), "embedding_model", "collection",
+     "points", "pages", "files", "published_at"}
 
 On Azure the same layout fits a Blob Storage container: a third backend beside `LocalStore`
 and `S3Store`.
@@ -63,14 +68,36 @@ class IndexStore:
             self._download(f"indexes/{meta['index']}/{name}", dest / name)
         return dest
 
+    def download_snapshot(self, snapshot_id: str, dest: Path) -> Path:
+        """Fetch a raw snapshot: its manifest, sitemap and the pages the manifest names."""
+        prefix = f"snapshots/{snapshot_id}"
+        dest.mkdir(parents=True, exist_ok=True)
+        self._download(f"{prefix}/manifest.json", dest / "manifest.json")
+        manifest = json.loads((dest / "manifest.json").read_text())
+        self._download(f"{prefix}/sitemap.json", dest / "sitemap.json")
+        for page in manifest["pages"]:
+            self._download(f"{prefix}/{page['file']}", dest / page["file"])
+        return dest
+
     # ---- publishing
 
     def upload_content(self, content_dir: Path, content_id: str) -> None:
         for path in sorted(content_dir.glob("*.md")):
             self._upload(f"content/{content_id}/{path.name}", path)
 
-    def publish(self, content_dir: Path, index_dir: Path, meta: dict) -> dict:
-        """Upload the content, then the index, then `LATEST.json` naming them. Returns `LATEST.json`."""
+    def upload_snapshot(self, snapshot_dir: Path) -> str:
+        manifest = json.loads((snapshot_dir / "manifest.json").read_text())
+        prefix = f"snapshots/{manifest['snapshot_id']}"
+        for name in ["sitemap.json", *(p["file"] for p in manifest["pages"])]:
+            self._upload(f"{prefix}/{name}", snapshot_dir / name)
+        self._upload(f"{prefix}/manifest.json", snapshot_dir / "manifest.json")  # last: it names the rest
+        return manifest["snapshot_id"]
+
+    def publish(self, content_dir: Path, index_dir: Path, meta: dict, snapshot_dir: Path | None = None) -> dict:
+        """Upload the snapshot (website content), the content, then the index, then `LATEST.json`
+        naming them. Returns `LATEST.json`."""
+        if snapshot_dir is not None:
+            self.upload_snapshot(snapshot_dir)
         self.upload_content(content_dir, meta["content_id"])
         files = sorted(str(p.relative_to(index_dir)) for p in index_dir.rglob("*") if p.is_file())
         files = [f for f in files if not f.endswith(".lock")]  # Qdrant's lock file, from the writer
@@ -79,6 +106,11 @@ class IndexStore:
         latest = {**meta, "files": files, "published_at": _now()}
         self._write(LATEST, (json.dumps(latest, indent=2) + "\n").encode())
         return latest
+
+    def save_refusal(self, text: str) -> str:
+        key = f"refused/{datetime.now(UTC):%Y%m%dT%H%M%SZ}.txt"
+        self._write(key, text.encode())
+        return key
 
 
 class LocalStore(IndexStore):
