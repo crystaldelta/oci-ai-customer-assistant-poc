@@ -31,7 +31,7 @@ def get_chat_model(settings: Settings) -> BaseChatModel:
             model=settings.ollama_model,
             base_url=settings.ollama_base_url,
             temperature=settings.temperature,
-            reasoning=True,
+            reasoning=False,
         )
     if settings.llm_provider == "bedrock":
         if not settings.bedrock_model_id:

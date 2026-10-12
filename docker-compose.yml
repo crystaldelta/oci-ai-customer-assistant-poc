@@ -139,7 +139,7 @@ services:
   qdrant:
     image: qdrant/qdrant:latest
     ports:
-      - "${QDRANT_PORT:-6333}:6333"   # REST + dashboard
+      - "127.0.0.1:${QDRANT_PORT:-6333}:6333"   # REST + dashboard
     volumes:
       - qdrant-data:/qdrant/storage
     restart: unless-stopped
